@@ -6,6 +6,8 @@ Billing form for RxPx Hospitals. Choose **Pharmacy bill** or **Lab bill**, fill 
 
 Open `index.html` in Chrome, or upload it to any web host (no server code needed).
 
+On Vercel, import this repo and deploy with the default settings. `vercel.json` skips the install and build steps, and `.vercelignore` publishes only `index.html`. Python is only used on your own computer, to rebuild `index.html` after changing a bill (see below).
+
 1. Choose **Pharmacy bill** or **Lab bill**.
 2. Fill in the patient, bill number and items. Amounts (quantity × unit price) and the total add up by themselves.
 3. Tap **Open PDF** to go to the filled PDF, or **Print bill** to print straight away. Print on A4 at 100% scale.

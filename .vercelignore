@@ -1,0 +1,5 @@
+# Vercel publishes only the finished page. index.html is built on a computer
+# with tools/build.py and committed, so Vercel has nothing to build or install.
+/*
+!index.html
+!vercel.json
