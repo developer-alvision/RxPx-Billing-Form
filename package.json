@@ -1,0 +1,13 @@
+{
+  "name": "rxpx-billing-form",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Billing form for RxPx Hospitals: fills the pharmacy and lab bill PDFs, previews and prints them.",
+  "scripts": {
+    "assets": "python3 tools/make_assets.py",
+    "build": "python3 tools/build.py"
+  },
+  "dependencies": {
+    "pdf-lib": "1.17.1"
+  }
+}

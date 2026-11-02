@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Pharmacy bill – RxPx Hospitals</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23171A1C'/%3E%3Ccircle cx='16' cy='19' r='5.5' fill='%23F68F01'/%3E%3Ccircle cx='16' cy='7.5' r='2.2' fill='%23F68F01'/%3E%3Ccircle cx='8' cy='11' r='2.2' fill='%23F68F01'/%3E%3Ccircle cx='24' cy='11' r='2.2' fill='%23F68F01'/%3E%3C/svg%3E">
+<style>
+/* ===== RxPx Hospitals billing: colours taken from the bill and the logo ===== */
+:root{
+  --ink:#171A1C;          /* text colour printed on the bill */
+  --ink-2:#4A5258;
+  --line:#DCDFE1;
+  --field:#8A9096;
+  --desk:#E3E5E6;
+  --paper:#FFFFFF;
+  --orange:#F68F01;       /* the sunburst in the RxPx logo */
+  --orange-press:#E07F00;
+  --orange-tint:#FFF4E6;
+  --warn:#8A4B00;
+  --error:#B42318;
+  --error-tint:#FEF3F2;
+  --ok:#1E7A46;
+  --ui:"Helvetica Neue",Helvetica,Arial,"Liberation Sans",Roboto,sans-serif;
+  --bill:Helvetica,Arial,"Liberation Sans","Nimbus Sans","TeX Gyre Heros",sans-serif;
+  color-scheme:light;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;scroll-padding-bottom:140px}
+body{margin:0;font:16px/1.45 var(--ui);color:var(--ink);background:var(--paper)}
+button,input,select{font:inherit;color:inherit}
+h2{font-size:18px;line-height:1.3;margin:0 0 12px;font-weight:700}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ----- Top bar ----- */
+.top{display:flex;align-items:center;gap:14px;padding:10px 20px;border-bottom:1px solid var(--line);background:var(--paper)}
+.brand{display:block;height:24px;width:auto}
+.top-title{font-weight:700;font-size:17px;line-height:24px;padding-left:14px;border-left:1px solid var(--line)}
+.top-gap{flex:1}
+
+/* ----- Layout ----- */
+.workspace{display:grid;grid-template-columns:minmax(0,1fr)}
+.form-col{width:100%;max-width:680px;margin:0 auto;padding:20px 20px 0}
+.desk{display:none}
+.wide-only{display:none!important}
+@media (min-width:1100px){
+  .workspace{grid-template-columns:minmax(560px,700px) minmax(0,1fr)}
+  .form-col{max-width:none;margin:0;padding:24px 28px 0}
+  .desk{display:block;background:var(--desk);border-left:1px solid var(--line)}
+  .desk-inner{position:sticky;top:0;max-height:100vh;overflow:auto;padding:28px 32px 36px}
+  .wide-only{display:inline-flex!important}
+  .narrow-only{display:none!important}
+}
+
+/* ----- Start screen: pick the bill ----- */
+.start{max-width:760px;margin:0 auto;padding:28px 20px 40px}
+.start h1{margin:0 0 18px;font-size:22px;line-height:1.25;font-weight:700}
+.start-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.choice-card{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:12px 12px 16px;border:1px solid var(--ink);border-radius:10px;background:var(--paper);text-align:left;cursor:pointer}
+.choice-card:hover{background:#F6F6F6}
+.choice-card:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.thumb{display:block;margin-bottom:6px;padding:14px 18px;border-radius:6px;background:var(--desk)}
+.thumb svg.sheet{box-shadow:0 1px 2px rgba(23,26,28,.16),0 6px 16px rgba(23,26,28,.10)}
+.choice-name{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:700}
+.choice-name svg{flex:0 0 auto;color:var(--orange)}
+.choice-sub{font-size:14px;color:var(--ink-2)}
+@media (max-width:420px){.thumb{padding:10px}.choice-name{font-size:16px}}
+
+/* ----- Bill type ----- */
+.billtype{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink);border-radius:8px;overflow:hidden}
+.bt{display:flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:8px 12px;border:0;background:var(--paper);font-weight:700;font-size:16px;cursor:pointer}
+.bt+.bt{border-left:1px solid var(--ink)}
+.bt svg{flex:0 0 auto}
+.bt[aria-pressed="true"]{background:var(--ink);color:#fff}
+.bt[aria-pressed="true"] svg{color:var(--orange)}
+.bt:focus-visible{outline:3px solid var(--orange);outline-offset:-3px}
+
+/* ----- Sections and fields ----- */
+.block{padding:22px 0;border-top:1px solid var(--line)}
+.billtype+.block{border-top:0}
+.field{margin:0 0 14px;min-width:0;border:0;padding:0}
+.field:last-child{margin-bottom:0}
+label,legend{display:block;font-size:14px;font-weight:700;margin:0 0 6px;padding:0}
+.input{display:block;width:100%;height:48px;padding:0 12px;border:1px solid var(--field);border-radius:6px;background:#fff;font-size:16px;appearance:none;-webkit-appearance:none}
+select.input{padding-right:30px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23171A1C' stroke-width='1.8'/%3E%3C/svg%3E") no-repeat right 11px center}
+.input::placeholder{color:#7C848A}
+.input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px var(--orange)}
+.input.num{text-align:right;font-variant-numeric:tabular-nums}
+.input.is-long{border-color:var(--warn);background:var(--orange-tint)}
+.row-2{display:grid;grid-template-columns:minmax(0,1fr);gap:0 16px}
+.row-2>.field{margin-bottom:14px}
+@media (min-width:480px){.row-2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.row-2>.field{margin-bottom:0}}
+.block>.row-2+.field{margin-top:14px}
+.joined{display:flex;gap:8px}
+.joined>.input:first-child{flex:1;min-width:0}
+#ageUnit{flex:0 0 112px;width:112px}
+.choices{position:relative;display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--field);border-radius:6px;overflow:hidden}
+.choices input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.choices label{display:flex;align-items:center;justify-content:center;height:46px;margin:0;font-weight:600;font-size:15px;cursor:pointer;border-left:1px solid var(--field);background:#fff}
+.choices label:first-of-type{border-left:0}
+.choices input:checked+label{background:var(--ink);color:#fff}
+.choices input:focus-visible+label{box-shadow:inset 0 0 0 3px var(--orange)}
+.hint{margin:6px 0 0;font-size:14px;color:var(--ink-2)}
+.hint:empty{display:none}
+
+/* ----- Items ----- */
+.block-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.count{font-size:14px;color:var(--ink-2)}
+.items-head{display:none}
+.item{display:grid;gap:8px 8px;padding:12px 0;border-bottom:1px solid var(--line)}
+.cell{min-width:0}
+.cell label{font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:4px}
+.item .input{height:44px}
+.item-no{grid-area:no;font-weight:700;font-size:14px;align-self:center}
+.item-no::before{content:attr(data-noun) " "}
+.c-desc{grid-area:desc}.c-qty{grid-area:qty}.c-price{grid-area:price}.c-amount{grid-area:amount}
+.item-del{grid-area:del;justify-self:end;align-self:center;display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:6px;background:transparent;color:var(--ink-2);cursor:pointer}
+.item-del:hover{background:var(--error-tint);color:var(--error)}
+.item-del:focus-visible{outline:3px solid var(--orange)}
+.items-pharmacy .item{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-areas:"no no del" "desc desc desc" "qty price amount"}
+.items-lab .item{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"no del" "desc desc" "amount amount"}
+@media (min-width:640px){
+  .items-head{display:grid;gap:8px;padding:0 0 6px;border-bottom:1px solid var(--ink);font-size:13px;font-weight:700}
+  .items-head .num-h{text-align:right}
+  .items-pharmacy .items-head,.items-pharmacy .item{grid-template-columns:20px minmax(0,1fr) 60px 92px 104px 34px}
+  .items-pharmacy .item{grid-template-areas:"no desc qty price amount del"}
+  .items-lab .items-head,.items-lab .item{grid-template-columns:20px minmax(0,1fr) 132px 34px}
+  .items-lab .item{grid-template-areas:"no desc amount del"}
+  .item{padding:6px 0;align-items:center}
+  .cell label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .item-no{color:var(--ink-2);font-weight:600}
+  .item-no::before{content:none}
+  .item-del{width:36px;height:36px}
+}
+.btn-add{width:100%;margin-top:12px;border-style:dashed}
+
+/* ----- Total ----- */
+.total{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,230px);align-items:center;gap:6px 16px}
+.total-label{font-size:18px;margin:0}
+.total-input{height:56px;font-size:26px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.total .hint,.total .link{grid-column:1/-1;justify-self:end;text-align:right}
+.link{border:0;background:none;padding:2px 0;color:var(--ink);font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.link:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.privacy{margin:4px 0 18px;font-size:13px;color:var(--ink-2)}
+
+/* ----- Buttons and action bar ----- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 16px;border:1px solid var(--ink);border-radius:6px;background:var(--paper);color:var(--ink);font-weight:700;font-size:16px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#F1F2F3}
+.btn:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.btn-primary{background:var(--orange);border-color:var(--orange)}
+.btn-primary:hover{background:var(--orange-press);border-color:var(--orange-press)}
+.btn-primary:focus-visible{outline-color:var(--ink)}
+.btn-quiet{min-height:40px;border-color:var(--field);font-weight:600;font-size:15px;padding:0 14px}
+.btn-side{flex:0 0 auto}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn[aria-busy="true"]{cursor:progress}
+.actions{position:sticky;bottom:0;z-index:5;margin:0 -20px;padding:10px 20px calc(10px + env(safe-area-inset-bottom));background:var(--paper);border-top:1px solid var(--line)}
+@media (min-width:1100px){.actions{margin:0 -28px;padding-left:28px;padding-right:28px}}
+.actions-row{display:flex;gap:10px}
+.actions-row .btn{flex:1 1 0;min-width:0}
+.status,.warn{margin:0 0 8px;font-size:14px;font-weight:600}
+.status:empty,.warn:empty{display:none}
+.status[data-kind="error"]{color:var(--error)}
+.status[data-kind="ok"]{color:var(--ok)}
+.warn{color:var(--warn)}
+
+/* ----- The paper ----- */
+.paper{max-width:820px;margin:0 auto}
+svg.sheet{display:block;width:100%;height:auto;aspect-ratio:595.276/841.89;background:#fff;box-shadow:0 1px 2px rgba(23,26,28,.14),0 10px 30px rgba(23,26,28,.10)}
+.sheet .ink text{font-family:var(--bill);fill:#171A1C;font-kerning:none;letter-spacing:0;white-space:pre;text-rendering:geometricPrecision}
+.sheet .hl rect{fill:rgba(246,143,1,.16);stroke:var(--orange);stroke-width:.9}
+@media (prefers-reduced-motion:no-preference){.sheet .hl rect{animation:hl-in .16s ease-out}}
+@keyframes hl-in{from{opacity:0}to{opacity:1}}
+.desk-note{margin:12px 0 0;text-align:center;font-size:14px;color:var(--ink-2)}
+
+/* ----- Full-screen preview ----- */
+.overlay{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;background:var(--desk)}
+.overlay-top{display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--paper);border-bottom:1px solid var(--line)}
+.overlay-top h2{margin:0;font-size:17px}
+.overlay-body{flex:1;overflow:auto;padding:16px;-webkit-overflow-scrolling:touch}
+.overlay-body .paper{max-width:900px}
+.overlay-bar{padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--paper);border-top:1px solid var(--line)}
+.overlay-bar>*{max-width:900px;margin-left:auto;margin-right:auto}
+body.has-overlay{overflow:hidden}
+
+.load-error{position:fixed;left:16px;right:16px;bottom:16px;z-index:30;padding:12px 16px;border:1px solid var(--error);border-radius:8px;background:var(--error-tint);color:var(--error);font-weight:600}
+
+/* ----- Printing: only the bill, on A4 ----- */
+#printArea{display:none}
+@page{size:A4;margin:0}
+@media print{
+  html,body{margin:0!important;padding:0!important;background:#fff!important}
+  #app,.overlay,.load-error{display:none!important}
+  #printArea{display:block!important;width:210mm;height:296.8mm;overflow:hidden}
+  #printArea svg.sheet{width:210mm;height:296.8mm;box-shadow:none}
+}
+</style>
+</head>
+<body>
+<div id="app" inert>
+  <header class="top">
+    <img id="brandLogo" class="brand" alt="RxPx Hospitals" width="153" height="24">
+    <span class="top-title">Billing</span>
+    <span class="top-gap"></span>
+    <button type="button" id="newBill" class="btn btn-quiet" hidden>Start new bill</button>
+  </header>
+
+  <section class="start" id="start" aria-labelledby="startTitle">
+    <h1 id="startTitle">Which bill do you want to make?</h1>
+    <div class="start-choices">
+      <button type="button" class="choice-card" data-start="pharmacy">
+        <span class="thumb" id="thumb-pharmacy"></span>
+        <span class="choice-name">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="2.5" y="8.25" width="19" height="7.5" rx="3.75" transform="rotate(-45 12 12)"/><path d="M8.7 8.7l6.6 6.6"/></svg>
+          Pharmacy bill
+        </span>
+        <span class="choice-sub">Medicines with quantity and price</span>
+      </button>
+      <button type="button" class="choice-card" data-start="lab">
+        <span class="thumb" id="thumb-lab"></span>
+        <span class="choice-name">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6.3L4.9 18.2A1.9 1.9 0 0 0 6.5 21h11a1.9 1.9 0 0 0 1.6-2.8L14 9.3V3M7.3 15h9.4"/></svg>
+          Lab bill
+        </span>
+        <span class="choice-sub">Tests with amounts</span>
+      </button>
+    </div>
+  </section>
+
+  <div class="workspace" id="workspace" hidden>
+    <main class="form-col" id="formCol">
+      <div class="billtype" role="group" aria-label="Bill type">
+        <button type="button" class="bt" data-type="pharmacy" aria-pressed="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="2.5" y="8.25" width="19" height="7.5" rx="3.75" transform="rotate(-45 12 12)"/><path d="M8.7 8.7l6.6 6.6"/></svg>
+          <span>Pharmacy bill</span>
+        </button>
+        <button type="button" class="bt" data-type="lab" aria-pressed="false">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6.3L4.9 18.2A1.9 1.9 0 0 0 6.5 21h11a1.9 1.9 0 0 0 1.6-2.8L14 9.3V3M7.3 15h9.4"/></svg>
+          <span>Lab bill</span>
+        </button>
+      </div>
+
+      <section class="block" aria-labelledby="hPatient">
+        <h2 id="hPatient">Patient</h2>
+        <div class="field">
+          <label for="patientName">Patient name</label>
+          <input id="patientName" class="input" data-pdf="Patient_Name" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="next">
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="ageNum">Age</label>
+            <div class="joined">
+              <input id="ageNum" class="input" data-pdf="Age" inputmode="numeric" maxlength="3" autocomplete="off" enterkeyhint="next">
+              <select id="ageUnit" class="input" data-pdf="Age" aria-label="Age in">
+                <option value="Years">Years</option>
+                <option value="Months">Months</option>
+                <option value="Days">Days</option>
+              </select>
+            </div>
+          </div>
+          <fieldset class="field">
+            <legend>Gender</legend>
+            <div class="choices">
+              <input type="radio" name="gender" id="gMale" value="Male" data-pdf="Gender"><label for="gMale">Male</label>
+              <input type="radio" name="gender" id="gFemale" value="Female" data-pdf="Gender"><label for="gFemale">Female</label>
+              <input type="radio" name="gender" id="gOther" value="Other" data-pdf="Gender"><label for="gOther">Other</label>
+            </div>
+          </fieldset>
+        </div>
+        <div class="field">
+          <label for="phone">Phone number</label>
+          <input id="phone" class="input" type="tel" data-pdf="Phone_Number" inputmode="tel" autocomplete="off" enterkeyhint="next">
+        </div>
+      </section>
+
+      <section class="block" aria-labelledby="hBill">
+        <h2 id="hBill">Bill</h2>
+        <div class="row-2">
+          <div class="field">
+            <label for="billNo">Bill number</label>
+            <input id="billNo" class="input" data-pdf="Bill_No" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
+            <p class="hint" id="billNoHint"></p>
+          </div>
+          <div class="field">
+            <label for="billDate">Date and time</label>
+            <div class="joined">
+              <input id="billDate" class="input" type="datetime-local" data-pdf="Date_Time">
+              <button type="button" id="nowBtn" class="btn btn-side">Now</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block" aria-labelledby="hItems">
+        <div class="block-head"><h2 id="hItems">Items</h2><span id="rowCount" class="count"></span></div>
+        <div id="items" class="items items-pharmacy">
+          <div class="items-head" id="itemsHead" aria-hidden="true"></div>
+          <div id="rows"></div>
+        </div>
+        <button type="button" id="addRow" class="btn btn-add">Add item</button>
+        <p class="hint" id="itemsHint"></p>
+      </section>
+
+      <section class="block total" aria-label="Total">
+        <label for="total" class="total-label">Total (Rs.)</label>
+        <input id="total" class="input total-input" data-pdf="Total_Amount" inputmode="decimal" autocomplete="off" enterkeyhint="done">
+        <p class="hint" id="totalHint"></p>
+        <button type="button" id="autoTotal" class="link" hidden></button>
+      </section>
+
+      <p class="privacy">Works without internet. Nothing you type is uploaded or kept after you close this page. Only the last bill number is remembered on this device.</p>
+
+      <div class="actions">
+        <p class="status" role="status" aria-live="polite"></p>
+        <p class="warn" aria-live="polite"></p>
+        <div class="actions-row">
+          <button type="button" class="btn narrow-only" data-act="preview">Preview bill</button>
+          <button type="button" class="btn wide-only" data-act="open">Open PDF</button>
+          <button type="button" class="btn wide-only" data-act="save">Save as PDF</button>
+          <button type="button" class="btn btn-primary" data-act="print">Print bill</button>
+        </div>
+      </div>
+    </main>
+
+    <aside class="desk" aria-label="Bill preview">
+      <div class="desk-inner">
+        <div class="paper" id="deskPaper"></div>
+        <p class="desk-note">The bill prints exactly like this.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="ovTitle" hidden>
+  <div class="overlay-top">
+    <button type="button" class="btn btn-quiet" id="ovBack" data-act="back">Back to edit</button>
+    <h2 id="ovTitle">Preview</h2>
+  </div>
+  <div class="overlay-body"><div class="paper" id="overlayPaper"></div></div>
+  <div class="overlay-bar">
+    <p class="status" role="status" aria-live="polite"></p>
+    <p class="warn" aria-live="polite"></p>
+    <div class="actions-row">
+      <button type="button" class="btn" data-act="open">Open PDF</button>
+      <button type="button" class="btn btn-primary" data-act="print">Print bill</button>
+    </div>
+  </div>
+</div>
+
+<div id="printArea" aria-hidden="true"></div>
+<div id="loadError" class="load-error" role="alert" hidden></div>
+
+<!-- ===== Built-in files: your two bill PDFs, their blank page drawings, and the logo ===== -->
+<script type="text/plain" id="pdf-pharmacy">__PDF_PHARMACY__</script>
+<script type="text/plain" id="pdf-lab">__PDF_LAB__</script>
+<script type="text/plain" id="bg-pharmacy">__BG_PHARMACY__</script>
+<script type="text/plain" id="bg-lab">__BG_LAB__</script>
+<script type="text/plain" id="logo-png">__LOGO__</script>
+
+<!-- pdf-lib 1.17.1, MIT License, Copyright (c) 2019 Andrew Dillon, https://github.com/Hopding/pdf-lib -->
+<script>__PDFLIB__</script>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ================= Settings ================= */
+  var PAGE_W = 595.276, PAGE_H = 841.89;              // A4 page in PDF points
+  var LOGO = __LOGO_BOX__;                              // where the logo sits on the bill (assets/logo.json)
+  var TEXT_RGB = [0.090196, 0.098039, 0.109804];      // #171A1C, the bill's own text colour
+  var MIN_SIZE = 6.5;                                 // smallest font size before long text is shortened
+  var ONE_LINE_SHRINK = 0.5;                          // a description may shrink this much (pt) before it wraps
+  var DESC_LINES = 2;                                 // long descriptions wrap onto a second line in their row
+  var CAP_HEIGHT = 0.718;                             // Helvetica capital height, in ems
+  var LEADING = 1.15;                                 // line spacing for wrapped descriptions, in ems
+  // Values on the same line as a printed label sit on that label's baseline
+  // (points above the field's bottom edge). Other values are centred in their field.
+  var LABEL_BASELINE = { Patient_Name: 4, Age: 4, Gender: 4, Phone_Number: 4, Bill_No: 4, Date_Time: 4, Total_Amount: 5 };
+  var ALIGN = { Quantity: "center", Unit_Price: "right", Amount: "right", Total_Amount: "right" };
+  var BOLD = { Total_Amount: true };
+  var BILLS = {
+    pharmacy: { label: "Pharmacy", itemsTitle: "Items", noun: "item", Noun: "Item", placeholder: "e.g. Paracetamol 650 mg tablet", hasQty: true },
+    lab:      { label: "Lab", itemsTitle: "Tests", noun: "test", Noun: "Test", placeholder: "e.g. Complete blood picture (CBP)", hasQty: false }
+  };
+  var STORE_KEY = "rxpx-billing:last-bill-no:";
+  var COLS = { desc: "Description", qty: "Quantity", price: "Unit_Price", amount: "Amount" };
+  var HEAD_LABELS = { Patient_Name: "patient name", Age: "age", Gender: "gender", Phone_Number: "phone number", Bill_No: "bill number", Date_Time: "date and time", Total_Amount: "total" };
+
+  /* ================= Small helpers ================= */
+  if (!Element.prototype.replaceChildren) {
+    Element.prototype.replaceChildren = function () {
+      while (this.firstChild) this.removeChild(this.firstChild);
+      this.append.apply(this, arguments);
+    };
+  }
+  var SVGNS = "http://www.w3.org/2000/svg", XLINK = "http://www.w3.org/1999/xlink";
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function el(tag, attrs) {
+    var n = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) { var v = attrs[k]; if (v !== undefined && v !== null && v !== false) n.setAttribute(k, v === true ? "" : String(v)); });
+    for (var i = 2; i < arguments.length; i++) n.append(arguments[i]);
+    return n;
+  }
+  function svgEl(tag, attrs) {
+    var n = document.createElementNS(SVGNS, tag);
+    Object.keys(attrs || {}).forEach(function (k) { n.setAttribute(k, String(attrs[k])); });
+    return n;
+  }
+  function setHref(node, url) { node.setAttribute("href", url); node.setAttributeNS(XLINK, "xlink:href", url); }
+  function rawText(id) { return document.getElementById(id).textContent.trim(); }
+  function b64ToBytes(b64) {
+    var bin = atob(b64.replace(/\s+/g, "")), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  var NF = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function fmt(n) { return NF.format(n).replace(/−/g, "-"); }
+  function parseNum(s) {
+    var t = String(s == null ? "" : s).replace(/rs\.?|inr|₹|,|\s/gi, "");
+    return /^[-+]?(\d+\.?\d*|\.\d+)$/.test(t) ? parseFloat(t) : NaN;
+  }
+  function money(s) {
+    var v = String(s || "").trim();
+    if (!v) return "";
+    var n = parseNum(v);
+    return isFinite(n) ? fmt(n) : v;
+  }
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function nowLocal() {
+    var d = new Date();
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function dateText(v) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v || "");
+    if (!m) return "";
+    var h = +m[4], ap = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return m[3] + "-" + m[2] + "-" + m[1] + " " + pad(h) + ":" + m[5] + " " + ap;
+  }
+
+  /* ================= State ================= */
+  function blankItem() { return { desc: "", qty: "", price: "", amount: "", amountAuto: true }; }
+  function hasContent(it) { return !!(it && (String(it.desc).trim() || String(it.qty).trim() || String(it.price).trim() || String(it.amount).trim())); }
+  var state = {
+    type: "pharmacy",
+    patient: { name: "", ageNum: "", ageUnit: "Years", gender: "", phone: "" },
+    bill: { no: "", noEdited: false, date: nowLocal() },
+    items: { pharmacy: [blankItem()], lab: [blankItem()] },
+    totals: { pharmacy: { manual: false, value: "" }, lab: { manual: false, value: "" } },
+    outputDone: false
+  };
+  function touched() { state.outputDone = false; }
+  function ageText() {
+    var n = state.patient.ageNum.trim();
+    if (!n) return "";
+    var one = n === "1", u = state.patient.ageUnit;
+    var word = u === "Months" ? (one ? "Month" : "Months") : u === "Days" ? (one ? "Day" : "Days") : (one ? "Year" : "Years");
+    return n + " " + word;
+  }
+  function calcTotal(type) {
+    var paise = 0, any = false;
+    state.items[type].forEach(function (it) {
+      var v = String(it.amount).trim(), n = parseNum(v);
+      if (v && isFinite(n)) { paise += Math.round(n * 100); any = true; }
+    });
+    return any ? paise / 100 : null;
+  }
+  function totalText(type) {
+    var t = state.totals[type];
+    if (t.manual) return money(t.value);
+    var c = calcTotal(type);
+    return c === null ? "" : fmt(c);
+  }
+
+  /* ================= Bill templates (read from your PDFs) ================= */
+  var PDFLib = window.PDFLib;
+  var T = {}, HELV, HELV_BOLD;
+  var LOGO_URI = "data:image/png;base64," + rawText("logo-png");
+  var badChars = new Set(), printable = new Map();
+
+  function canPrint(ch) {
+    if (!printable.has(ch)) {
+      var ok = true;
+      try { HELV.encodeText(ch); HELV_BOLD.encodeText(ch); } catch (e) { ok = false; }
+      printable.set(ch, ok);
+    }
+    return printable.get(ch);
+  }
+  function clean(s) {
+    var t = String(s == null ? "" : s).replace(/\s+/g, " ").trim(), out = "";
+    for (var ch of t) { if (canPrint(ch)) out += ch; else { out += "?"; badChars.add(ch); } }
+    return out;
+  }
+
+  async function loadTemplates() {
+    var scratch = await PDFLib.PDFDocument.create();
+    HELV = await scratch.embedFont(PDFLib.StandardFonts.Helvetica);
+    HELV_BOLD = await scratch.embedFont(PDFLib.StandardFonts.HelveticaBold);
+    for (var type of Object.keys(BILLS)) {
+      var bytes = b64ToBytes(rawText("pdf-" + type));
+      var doc = await PDFLib.PDFDocument.load(bytes);
+      var fields = {};
+      doc.getForm().getFields().forEach(function (f) {
+        var widget = f.acroField.getWidgets()[0];
+        if (!widget) return;
+        var r = widget.getRectangle();
+        var da = (f.acroField.getDefaultAppearance && f.acroField.getDefaultAppearance()) || "";
+        var m = /(\d+(?:\.\d+)?)\s+Tf/.exec(da);
+        fields[f.getName()] = {
+          x: r.x, y: r.y, w: r.width, h: r.height,
+          size: m && +m[1] > 0 ? +m[1] : 9,
+          maxLen: typeof f.getMaxLength === "function" ? f.getMaxLength() : undefined
+        };
+      });
+      var rows = 0;
+      while (fields["Item_" + (rows + 1) + "_Description"]) rows++;
+      T[type] = { bytes: bytes, fields: fields, rows: rows, bg: "data:image/svg+xml;charset=utf-8," + encodeURIComponent(rawText("bg-" + type)) };
+    }
+  }
+
+  /* ================= Placing text in the PDF's fields ================= */
+  function fitText(text, font, size, maxW) {
+    var s = size;
+    while (s > MIN_SIZE && font.widthOfTextAtSize(text, s) > maxW) s = Math.max(MIN_SIZE, s - 0.25);
+    if (font.widthOfTextAtSize(text, s) <= maxW) return { text: text, size: s, cut: false };
+    var lo = 0, hi = text.length;
+    while (lo < hi) {
+      var mid = (lo + hi + 1) >> 1;
+      if (font.widthOfTextAtSize(text.slice(0, mid).trimEnd() + "…", s) <= maxW) lo = mid; else hi = mid - 1;
+    }
+    return { text: text.slice(0, lo).trimEnd() + "…", size: s, cut: true };
+  }
+  function wrapWords(text, font, size, maxW) {
+    var lines = [], cur = "";
+    text.split(" ").forEach(function (word) {
+      var next = cur ? cur + " " + word : word;
+      if (font.widthOfTextAtSize(next, size) <= maxW) { cur = next; return; }
+      if (cur) lines.push(cur);
+      while (word.length > 1 && font.widthOfTextAtSize(word, size) > maxW) {   // a word wider than the line
+        var n = word.length;
+        while (n > 1 && font.widthOfTextAtSize(word.slice(0, n), size) > maxW) n--;
+        lines.push(word.slice(0, n)); word = word.slice(n);
+      }
+      cur = word;
+    });
+    if (cur) lines.push(cur);
+    return lines;
+  }
+  function fitLines(text, font, size, maxW, maxLines) {
+    var s, lines;
+    for (s = size; s >= size - ONE_LINE_SHRINK; s -= 0.25) {
+      if (font.widthOfTextAtSize(text, s) <= maxW) return { lines: [text], size: s, cut: false };
+    }
+    for (s = size; s >= MIN_SIZE; s -= 0.25) {
+      lines = wrapWords(text, font, s, maxW);
+      if (lines.length <= maxLines) return { lines: lines, size: s, cut: false };
+    }
+    lines = wrapWords(text, font, MIN_SIZE, maxW);
+    var last = fitText(lines.slice(maxLines - 1).join(" "), font, MIN_SIZE, maxW);
+    return { lines: lines.slice(0, maxLines - 1).concat([last.text]), size: MIN_SIZE, cut: true };
+  }
+  // Returns one entry per printed line (descriptions can take two lines).
+  function place(name, box, text, opt) {
+    opt = opt || {};
+    var key = name.replace(/^Item_\d+_/, "");
+    var align = opt.align || ALIGN[name] || ALIGN[key] || "left";
+    var bold = !!BOLD[name], font = bold ? HELV_BOLD : HELV;
+    var maxW = opt.maxW != null ? opt.maxW : box.w;
+    var f;
+    if (opt.lines > 1) f = fitLines(text, font, box.size, maxW, opt.lines);
+    else { var one = fitText(text, font, box.size, maxW); f = { lines: [one.text], size: one.size, cut: one.cut }; }
+    var n = f.lines.length, lead = LEADING * f.size;
+    var top = LABEL_BASELINE[name] != null
+      ? box.y + LABEL_BASELINE[name]
+      : box.y + (box.h - (CAP_HEIGHT * f.size + lead * (n - 1))) / 2 + lead * (n - 1);
+    return f.lines.map(function (line, i) {
+      var w = font.widthOfTextAtSize(line, f.size);
+      var k = { name: name, text: line, size: f.size, bold: bold, y: top - i * lead, cut: f.cut && i === n - 1, src: opt.src };
+      if (align === "right") { k.x = box.x + box.w - w; k.ax = box.x + box.w; k.anchor = "end"; }
+      else if (align === "center") { k.x = box.x + (box.w - w) / 2; k.ax = box.x + box.w / 2; k.anchor = "middle"; }
+      else { k.x = box.x; k.ax = box.x; k.anchor = "start"; }
+      return k;
+    });
+  }
+  function labAmountBox(type, n) {
+    var F = T[type].fields, d = F["Item_" + n + "_Description"], t = F.Total_Amount;
+    var right = t ? t.x + t.w : d.x + d.w;
+    return { x: d.x, y: d.y, w: right - d.x, h: d.h, size: d.size };
+  }
+  function billValues(type) {
+    var p = state.patient, b = state.bill, rows = [];
+    state.items[type].forEach(function (it, idx) {
+      if (!hasContent(it)) return;
+      rows.push({ idx: idx, Description: clean(it.desc), Quantity: clean(it.qty), Unit_Price: clean(money(it.price)), Amount: clean(money(it.amount)) });
+    });
+    return {
+      head: { Patient_Name: clean(p.name), Age: clean(ageText()), Gender: clean(p.gender), Phone_Number: clean(p.phone), Bill_No: clean(b.no), Date_Time: clean(dateText(b.date)) },
+      rows: rows,
+      total: clean(totalText(type))
+    };
+  }
+  function layoutBill(type) {
+    var F = T[type].fields, v = billValues(type), ink = [];
+    function add(list) { ink.push.apply(ink, list); return list; }
+    Object.keys(v.head).forEach(function (name) {
+      if (v.head[name] && F[name]) add(place(name, F[name], v.head[name], { src: name }));
+    });
+    v.rows.slice(0, T[type].rows).forEach(function (row, i) {
+      var n = i + 1, d = F["Item_" + n + "_Description"];
+      if (type === "lab") {
+        var maxW = d.w;
+        if (row.Amount) {
+          var a = add(place("Item_" + n + "_Amount", labAmountBox(type, n), row.Amount, { align: "right", src: row.idx }))[0];
+          maxW = Math.max(30, a.x - 14 - d.x);
+        }
+        if (row.Description) add(place("Item_" + n + "_Description", d, row.Description, { maxW: maxW, lines: DESC_LINES, src: row.idx }));
+      } else {
+        ["Description", "Quantity", "Unit_Price", "Amount"].forEach(function (col) {
+          var box = F["Item_" + n + "_" + col];
+          if (box && row[col]) add(place("Item_" + n + "_" + col, box, row[col], { lines: col === "Description" ? DESC_LINES : 1, src: row.idx }));
+        });
+      }
+    });
+    if (v.total && F.Total_Amount) add(place("Total_Amount", F.Total_Amount, v.total, { src: "Total_Amount" }));
+    return { ink: ink, cut: ink.filter(function (k) { return k.cut; }) };
+  }
+
+  /* ================= The paper (screen preview and print copy) ================= */
+  var screenSheet, printSheet;
+  function makeSheet(withHighlight) {
+    var root = svgEl("svg", { "class": "sheet", viewBox: "0 0 " + PAGE_W + " " + PAGE_H, "aria-hidden": "true", focusable: "false" });
+    root.append(svgEl("rect", { width: PAGE_W, height: PAGE_H, fill: "#fff" }));
+    var bg = svgEl("image", { x: 0, y: 0, width: PAGE_W, height: PAGE_H, preserveAspectRatio: "none" });
+    var logo = svgEl("image", { x: LOGO.x, y: LOGO.y, width: LOGO.w, height: LOGO.h, preserveAspectRatio: "none" });
+    setHref(logo, LOGO_URI);
+    var ink = svgEl("g", { "class": "ink" });
+    root.append(bg, logo, ink);
+    var hl = null;
+    if (withHighlight) { hl = svgEl("g", { "class": "hl" }); root.append(hl); }
+    return { root: root, bg: bg, ink: ink, hl: hl };
+  }
+  function svgText(k) {
+    var t = svgEl("text", { x: k.ax.toFixed(2), y: (PAGE_H - k.y).toFixed(2), "font-size": k.size, "text-anchor": k.anchor });
+    if (k.bold) t.setAttribute("font-weight", "700");
+    t.textContent = k.text;
+    return t;
+  }
+  function render() {
+    badChars.clear();
+    var out = layoutBill(state.type);
+    [screenSheet, printSheet].forEach(function (sh) { sh.ink.replaceChildren.apply(sh.ink, out.ink.map(svgText)); });
+    drawHighlight();
+    showWarnings(out.cut);
+    refreshTotal();
+  }
+
+  /* Highlight the spot on the paper where the focused field prints */
+  function printedRow(idx) {
+    var list = state.items[state.type], n = 1;
+    for (var i = 0; i < idx; i++) if (hasContent(list[i])) n++;
+    return n;
+  }
+  function targetBox(node) {
+    if (!node || !node.dataset || !T[state.type]) return null;
+    var F = T[state.type].fields;
+    if (node.dataset.pdf) return F[node.dataset.pdf] || null;
+    var row = node.closest && node.closest(".item");
+    if (!row || !node.dataset.col) return null;
+    var n = printedRow(+row.dataset.row);
+    if (n > T[state.type].rows) return null;
+    var d = F["Item_" + n + "_Description"];
+    if (state.type === "lab" && node.dataset.col === "amount") {
+      var t = F.Total_Amount;
+      return t ? { x: t.x, y: d.y, w: t.w, h: d.h } : d;
+    }
+    return F["Item_" + n + "_" + COLS[node.dataset.col]] || null;
+  }
+  function drawHighlight() {
+    if (!screenSheet || !screenSheet.hl) return;
+    screenSheet.hl.replaceChildren();
+    if (!$("#overlay").hidden) return;
+    var box = targetBox(document.activeElement);
+    if (!box) return;
+    screenSheet.hl.append(svgEl("rect", {
+      x: (box.x - 3).toFixed(2), y: (PAGE_H - box.y - box.h - 1).toFixed(2),
+      width: (box.w + 6).toFixed(2), height: (box.h + 2).toFixed(2), rx: 2
+    }));
+  }
+
+  /* Warnings about text that won't fit or can't print */
+  function showWarnings(cut) {
+    $$(".is-long").forEach(function (n) { n.classList.remove("is-long"); });
+    var msgs = [];
+    if (badChars.size) msgs.push("These characters can't be printed and will show as ?: " + Array.from(badChars).join(" ") + ". Please use English letters and numbers.");
+    if (cut.length) {
+      var names = cut.map(function (k) {
+        if (typeof k.src === "string") { markLong($('#formCol [data-pdf="' + k.src + '"]:not([type=radio])')); return HEAD_LABELS[k.src] || k.src; }
+        var col = k.name.replace(/^Item_\d+_/, "");
+        var key = Object.keys(COLS).filter(function (c) { return COLS[c] === col; })[0];
+        markLong($('.item[data-row="' + k.src + '"] [data-col="' + key + '"]'));
+        return BILLS[state.type].noun + " " + (k.src + 1) + (col === "Description" ? "" : " " + col.replace("_", " ").toLowerCase());
+      });
+      msgs.push("Too long to fit on the bill, so it was shortened: " + names.join(", ") + ".");
+    }
+    var full = $$("#formCol input[maxlength]").filter(function (i) { return +i.getAttribute("maxlength") >= 20 && i.value.length >= +i.getAttribute("maxlength"); });
+    if (full.length) {
+      full.forEach(markLong);
+      msgs.push("A box is full: the bill allows " + full[0].getAttribute("maxlength") + " characters there.");
+    }
+    $$(".warn").forEach(function (w) { w.textContent = msgs.join(" "); });
+  }
+  function markLong(input) { if (input) input.classList.add("is-long"); }
+
+  /* ================= Form ================= */
+  function applyLimits() {
+    var F = T[state.type].fields;
+    [["#patientName", "Patient_Name"], ["#phone", "Phone_Number"], ["#billNo", "Bill_No"]].forEach(function (p) {
+      var f = F[p[1]];
+      if (f && f.maxLen) $(p[0]).setAttribute("maxlength", f.maxLen); else $(p[0]).removeAttribute("maxlength");
+    });
+  }
+  function readLast(type) { try { return localStorage.getItem(STORE_KEY + type) || ""; } catch (e) { return ""; } }
+  function nextNumber(no) {
+    var m = /^(.*?)(\d+)(\D*)$/.exec(no || "");
+    if (!m) return "";
+    var next = typeof BigInt === "function" ? (BigInt(m[2]) + BigInt(1)).toString() : String(Number(m[2]) + 1);
+    return m[1] + next.padStart(m[2].length, "0") + m[3];
+  }
+  function suggestBillNo(type) { return nextNumber(readLast(type)); }
+  function refreshBillNoHint() {
+    var last = readLast(state.type);
+    $("#billNoHint").textContent = !state.bill.noEdited && last && state.bill.no ? "Next number after " + last + "." : "";
+  }
+  function syncInputs() {
+    $("#patientName").value = state.patient.name;
+    $("#ageNum").value = state.patient.ageNum;
+    $("#ageUnit").value = state.patient.ageUnit;
+    $$('input[name="gender"]').forEach(function (r) { r.checked = r.value === state.patient.gender; });
+    $("#phone").value = state.patient.phone;
+    $("#billNo").value = state.bill.no;
+    $("#billDate").value = state.bill.date;
+    refreshBillNoHint();
+  }
+  function refreshTotal() {
+    var t = state.totals[state.type], c = calcTotal(state.type), input = $("#total");
+    if (!t.manual && document.activeElement !== input) input.value = c === null ? "" : fmt(c);
+    var btn = $("#autoTotal");
+    btn.hidden = !(t.manual && c !== null);
+    if (!btn.hidden) btn.textContent = "Use the calculated total: " + fmt(c);
+    $("#totalHint").textContent = t.manual ? "You typed this total." : c === null ? "Fills in when you add amounts, or type it." : "Adds up the amounts automatically.";
+  }
+
+  function xIcon() {
+    var s = svgEl("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "aria-hidden": "true" });
+    s.append(svgEl("path", { d: "M6 6l12 12M18 6L6 18" }));
+    return s;
+  }
+  function rowEl(it, i) {
+    var type = state.type, cfg = BILLS[type], F = T[type].fields;
+    var descMax = (F.Item_1_Description && F.Item_1_Description.maxLen) || 100;
+    function cell(col, label, value, attrs, numeric) {
+      var id = "r" + i + col;
+      var input = el("input", Object.assign({ id: id, "class": "input" + (numeric ? " num" : ""), "data-col": col, autocomplete: "off", enterkeyhint: "next" }, attrs));
+      input.value = value;
+      return el("div", { "class": "cell c-" + col }, el("label", { "for": id }, label), input);
+    }
+    var row = el("div", { "class": "item", "data-row": i });
+    row.append(el("span", { "class": "item-no", "data-noun": cfg.Noun }, String(i + 1)));
+    row.append(cell("desc", "Description", it.desc, { placeholder: cfg.placeholder, maxlength: descMax, autocapitalize: "sentences" }));
+    if (cfg.hasQty) {
+      row.append(cell("qty", "Qty", it.qty, { inputmode: "decimal", maxlength: 10 }, true));
+      row.append(cell("price", "Unit price", it.price, { inputmode: "decimal", maxlength: 12 }, true));
+    }
+    row.append(cell("amount", cfg.hasQty ? "Amount" : "Amount (optional)", it.amount, { inputmode: "decimal", maxlength: 14 }, true));
+    row.append(el("button", { type: "button", "class": "item-del", "aria-label": "Remove " + cfg.noun + " " + (i + 1) }, xIcon()));
+    return row;
+  }
+  function renderItems() {
+    var type = state.type, cfg = BILLS[type], list = state.items[type], max = T[type].rows;
+    $("#hItems").textContent = cfg.itemsTitle;
+    $("#items").className = "items items-" + type;
+    var head = cfg.hasQty
+      ? [el("span"), el("span", {}, "Description / particulars"), el("span", { "class": "num-h" }, "Qty"), el("span", { "class": "num-h" }, "Unit price"), el("span", { "class": "num-h" }, "Amount (Rs.)"), el("span")]
+      : [el("span"), el("span", {}, "Description / particulars"), el("span", { "class": "num-h" }, "Amount (Rs.)"), el("span")];
+    $("#itemsHead").replaceChildren.apply($("#itemsHead"), head);
+    $("#rows").replaceChildren.apply($("#rows"), list.map(rowEl));
+    var add = $("#addRow");
+    add.disabled = list.length >= max;
+    add.textContent = list.length >= max ? "All " + max + " rows on the bill are used" : "Add " + cfg.noun;
+    $("#rowCount").textContent = list.length + " of " + max + " rows";
+    $("#itemsHint").textContent = cfg.hasQty
+      ? "Amount fills in from quantity × unit price. You can also type it."
+      : "Amounts are optional. If you add them, they print at the right and the total adds them up.";
+  }
+  function addRow(focus) {
+    var list = state.items[state.type];
+    if (list.length >= T[state.type].rows) return false;
+    list.push(blankItem());
+    renderItems(); render();
+    if (focus !== false) $('.item[data-row="' + (list.length - 1) + '"] [data-col="desc"]').focus();
+    return true;
+  }
+  function removeRow(i) {
+    var list = state.items[state.type];
+    if (list.length === 1) list[0] = blankItem(); else list.splice(i, 1);
+    touched(); renderItems(); render();
+    var next = $('.item[data-row="' + Math.min(i, list.length - 1) + '"] [data-col="desc"]');
+    if (next) next.focus();
+  }
+  function autoAmount(it, row) {
+    var q = parseNum(it.qty), p = parseNum(it.price), amt = row.querySelector('[data-col="amount"]');
+    if (String(it.qty).trim() && String(it.price).trim() && isFinite(q) && isFinite(p)) {
+      it.amount = (Math.round(q * p * 100) / 100).toFixed(2);
+      it.amountAuto = true;
+      amt.value = it.amount;
+    } else if (it.amountAuto && it.amount) {
+      it.amount = "";
+      amt.value = "";
+    }
+  }
+  function setType(type) {
+    if (type === state.type || !T[type]) return;
+    state.type = type;
+    $$(".bt").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.type === type)); });
+    [screenSheet, printSheet].forEach(function (sh) { setHref(sh.bg, T[type].bg); });
+    if (!state.bill.noEdited) { state.bill.no = suggestBillNo(type); $("#billNo").value = state.bill.no; }
+    refreshBillNoHint(); applyLimits(); renderItems(); render();
+    document.title = BILLS[type].label + " bill – RxPx Hospitals";
+  }
+
+  /* ================= Messages ================= */
+  var sayTimer = null;
+  function say(msg, kind) {
+    $$(".status").forEach(function (s) { s.textContent = msg; s.dataset.kind = kind || "info"; });
+    clearTimeout(sayTimer);
+    if (kind === "ok") sayTimer = setTimeout(function () { say(""); }, 7000);
+  }
+
+  /* ================= Preview, print, save ================= */
+  var lastFocus = null;
+  function openPreview() {
+    lastFocus = document.activeElement;
+    $("#overlay").hidden = false;
+    $("#app").inert = true;
+    document.body.classList.add("has-overlay");
+    $("#overlayPaper").append(screenSheet.root);
+    drawHighlight();
+    $("#ovBack").focus();
+  }
+  function closePreview() {
+    if ($("#overlay").hidden) return;
+    $("#overlay").hidden = true;
+    $("#app").inert = false;
+    document.body.classList.remove("has-overlay");
+    $("#deskPaper").append(screenSheet.root);
+    if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+    drawHighlight();
+  }
+  function ready() {
+    if (!state.patient.name.trim()) {
+      say("Enter the patient name first.", "error");
+      closePreview(); $("#patientName").focus();
+      return false;
+    }
+    if (!state.items[state.type].some(hasContent)) {
+      say("Add at least one " + BILLS[state.type].noun + " first.", "error");
+      closePreview(); $('.item [data-col="desc"]').focus();
+      return false;
+    }
+    return true;
+  }
+  function remember() {
+    var no = state.bill.no.trim();
+    if (no) { try { localStorage.setItem(STORE_KEY + state.type, no); } catch (e) { /* storage blocked: skip */ } }
+    state.outputDone = true;
+  }
+  function printBill() {
+    if (!ready()) return;
+    remember();
+    say("");
+    window.print();
+  }
+  function fileName() {
+    function part(s) { return String(s || "").normalize("NFKD").replace(/[^\w.-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""); }
+    return ["RxPx", BILLS[state.type].label, "Bill", part(state.bill.no), part(state.patient.name)].filter(Boolean).join("-") + ".pdf";
+  }
+  async function buildPdf(type) {
+    // Copy the bill page into a fresh PDF. Re-saving your PDF directly breaks it
+    // (it was edited after creation and pdf-lib mis-writes that history), and the
+    // fill-in boxes are dropped because a printed bill is final.
+    var src = await PDFLib.PDFDocument.load(T[type].bytes);
+    src.getPage(0).node.delete(PDFLib.PDFName.of("Annots"));
+    var doc = await PDFLib.PDFDocument.create();
+    var page = (await doc.copyPages(src, [0]))[0];
+    doc.addPage(page);
+    var regular = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+    var bold = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+    var color = PDFLib.rgb(TEXT_RGB[0], TEXT_RGB[1], TEXT_RGB[2]);
+    badChars.clear();
+    layoutBill(type).ink.forEach(function (k) {
+      page.drawText(k.text, { x: k.x, y: k.y, size: k.size, font: k.bold ? bold : regular, color: color });
+    });
+    doc.setTitle(("RxPx Hospitals " + BILLS[type].label + " Bill " + state.bill.no.trim()).trim());
+    doc.setAuthor("RxPx Hospitals");
+    doc.setCreator("RxPx Billing");
+    return doc.save();
+  }
+  function busy(on) {
+    $$('[data-act="save"],[data-act="open"]').forEach(function (b) {
+      b.disabled = on;
+      if (on) b.setAttribute("aria-busy", "true"); else b.removeAttribute("aria-busy");
+    });
+    if (on) say("Making the PDF…");
+  }
+  function downloadUrl(url, name) {
+    var a = el("a", { href: url, download: name });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 15000);
+  }
+  function failed(err) {
+    console.error(err);
+    say("The PDF could not be made: " + (err && err.message ? err.message : err), "error");
+  }
+  async function savePdf() {
+    if (!ready()) return;
+    busy(true);
+    try {
+      var bytes = await buildPdf(state.type), name = fileName();
+      downloadUrl(URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })), name);
+      remember();
+      say("Saved " + name, "ok");
+    } catch (err) { failed(err); } finally { busy(false); }
+  }
+  // Fill the selected bill's PDF and go to it. Browsers that can show PDFs open it in
+  // a new tab; phones without a PDF viewer get the file, which they can open from there.
+  async function openPdf() {
+    if (!ready()) return;
+    var win = navigator.pdfViewerEnabled === false ? null : window.open("", "_blank");   // opened now, while the tap still counts
+    if (win) {
+      try {
+        win.document.title = "Making the bill…";
+        win.document.body.style.cssText = "font:16px/1.5 Helvetica,Arial,sans-serif;padding:24px;color:#171A1C";
+        win.document.body.textContent = "Making the bill…";
+      } catch (e) { /* the new tab is still usable without the message */ }
+    }
+    busy(true);
+    try {
+      var bytes = await buildPdf(state.type), name = fileName();
+      var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+      if (win && !win.closed) {
+        win.location.href = url;
+        say("Opened " + name + " in a new tab. Print or save it from there.", "ok");
+      } else {
+        downloadUrl(url, name);
+        say("Saved " + name + ". Open it from your downloads to view or print it.", "ok");
+      }
+      remember();
+    } catch (err) {
+      if (win && !win.closed) win.close();
+      failed(err);
+    } finally { busy(false); }
+  }
+  function chooseBill(type) {
+    setType(type);
+    $("#start").hidden = true;
+    $("#workspace").hidden = false;
+    $("#newBill").hidden = false;
+    window.scrollTo(0, 0);
+    $("#patientName").focus();
+  }
+  function hasData() {
+    var p = state.patient;
+    return !!(p.name.trim() || p.ageNum || p.gender || p.phone.trim() || state.items.pharmacy.some(hasContent) || state.items.lab.some(hasContent));
+  }
+  function newBill() {
+    if (hasData() && !state.outputDone && !window.confirm("Start a new bill? The details on this bill will be cleared.")) return;
+    state.patient = { name: "", ageNum: "", ageUnit: "Years", gender: "", phone: "" };
+    state.items = { pharmacy: [blankItem()], lab: [blankItem()] };
+    state.totals = { pharmacy: { manual: false, value: "" }, lab: { manual: false, value: "" } };
+    state.bill = { no: suggestBillNo(state.type), noEdited: false, date: nowLocal() };
+    state.outputDone = false;
+    syncInputs(); renderItems(); render();
+    say("New bill started.", "ok");
+    $("#patientName").focus();
+  }
+
+  /* ================= Events ================= */
+  function bind(sel, fn) {
+    $(sel).addEventListener("input", function (e) { fn(e.target.value); touched(); render(); });
+  }
+  function wire() {
+    bind("#patientName", function (v) { state.patient.name = v; });
+    bind("#phone", function (v) { state.patient.phone = v; });
+    bind("#billNo", function (v) { state.bill.no = v; state.bill.noEdited = true; refreshBillNoHint(); });
+    bind("#billDate", function (v) { state.bill.date = v; });
+    $("#ageNum").addEventListener("input", function (e) {
+      var v = e.target.value.replace(/\D/g, "").slice(0, 3);
+      if (v !== e.target.value) e.target.value = v;
+      state.patient.ageNum = v; touched(); render();
+    });
+    $("#ageUnit").addEventListener("change", function (e) { state.patient.ageUnit = e.target.value; touched(); render(); });
+    $$('input[name="gender"]').forEach(function (r) {
+      r.addEventListener("change", function (e) { if (e.target.checked) { state.patient.gender = e.target.value; touched(); render(); } });
+    });
+    $("#nowBtn").addEventListener("click", function () { state.bill.date = nowLocal(); $("#billDate").value = state.bill.date; touched(); render(); });
+
+    $("#rows").addEventListener("input", function (e) {
+      var input = e.target, row = input.closest(".item");
+      if (!row || !input.dataset.col) return;
+      var it = state.items[state.type][+row.dataset.row], col = input.dataset.col;
+      it[col] = input.value;
+      if (col === "amount") it.amountAuto = false;
+      if (BILLS[state.type].hasQty && (col === "qty" || col === "price")) autoAmount(it, row);
+      touched(); render();
+    });
+    $("#rows").addEventListener("click", function (e) {
+      var b = e.target.closest(".item-del");
+      if (b) removeRow(+b.closest(".item").dataset.row);
+    });
+    $("#addRow").addEventListener("click", function () { addRow(true); });
+
+    $("#total").addEventListener("input", function (e) {
+      var t = state.totals[state.type];
+      t.value = e.target.value; t.manual = e.target.value.trim() !== "";
+      touched(); render();
+    });
+    $("#total").addEventListener("blur", refreshTotal);
+    $("#autoTotal").addEventListener("click", function () {
+      var t = state.totals[state.type]; t.manual = false; t.value = "";
+      render(); $("#total").focus();
+    });
+
+    $$(".bt").forEach(function (b) { b.addEventListener("click", function () { setType(b.dataset.type); }); });
+    $$(".choice-card").forEach(function (b) { b.addEventListener("click", function () { chooseBill(b.dataset.start); }); });
+    $("#newBill").addEventListener("click", newBill);
+
+    document.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-act]");
+      if (!b || b.disabled) return;
+      var act = b.dataset.act;
+      if (act === "preview") openPreview();
+      else if (act === "back") closePreview();
+      else if (act === "print") printBill();
+      else if (act === "open") openPdf();
+      else if (act === "save") savePdf();
+    });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") closePreview(); });
+    document.addEventListener("focusin", drawHighlight);
+    document.addEventListener("focusout", function () { setTimeout(drawHighlight, 0); });
+
+    // Enter moves to the next box; at the end of the last row it adds a new row.
+    $("#formCol").addEventListener("keydown", function (e) {
+      if (e.key !== "Enter" || e.isComposing || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+      var t = e.target;
+      if (!(t instanceof HTMLInputElement) || t.type === "radio" || t.type === "datetime-local") return;
+      e.preventDefault();
+      var row = t.closest(".item");
+      if (row && t.dataset.col === "amount" && +row.dataset.row === state.items[state.type].length - 1 && hasContent(state.items[state.type][+row.dataset.row])) {
+        if (addRow(true)) return;
+      }
+      var order = $$("#formCol input:not([type=radio]):not([type=datetime-local]):not(:disabled)");
+      var next = order[order.indexOf(t) + 1];
+      if (next) next.focus(); else t.blur();
+    });
+  }
+
+  /* ================= Start ================= */
+  $("#brandLogo").src = LOGO_URI;
+  loadTemplates().then(function () {
+    screenSheet = makeSheet(true);
+    printSheet = makeSheet(false);
+    [screenSheet, printSheet].forEach(function (sh) { setHref(sh.bg, T[state.type].bg); });
+    $("#deskPaper").append(screenSheet.root);
+    $("#printArea").append(printSheet.root);
+    Object.keys(BILLS).forEach(function (type) {          // a picture of each bill on the start screen
+      var thumb = makeSheet(false);
+      setHref(thumb.bg, T[type].bg);
+      $("#thumb-" + type).append(thumb.root);
+    });
+    state.bill.no = suggestBillNo(state.type);
+    wire(); syncInputs(); applyLimits(); renderItems(); render();
+    $("#app").inert = false;
+  }).catch(function (err) {
+    console.error(err);
+    var box = $("#loadError");
+    box.textContent = "The bill templates could not be loaded (" + (err && err.message ? err.message : err) + "). Please reopen the file.";
+    box.hidden = false;
+  });
+})();
+</script>
+</body>
+</html>
